@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Basketball Dex</title>
+    <style>
+        /* --- Basic Setup & Fonts --- */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+
+        /* --- Basketball Theme Colors --- */
+        :root {
+            --dex-main-color: #ff6f00; /* Basketball Orange */
+            --dex-accent-color: #e65100; /* Darker Orange */
+            --screen-bg: #2a2a2a; /* Dark Grey/Black Screen */
+            --screen-border: #000; /* Black Border */
+            --panel-bg-left: #333;
+            --panel-bg-right: #444;
+            --text-color: #eee;
+            --text-on-screen: #ffcc99; /* Light Orange/Cream Text */
+            --button-black: #000; /* Black Button (replaces blue) */
+            --button-black-border: #222; /* Dark Grey Border */
+            --compare-select-border: #00bcd4; /* Cyan border for comparison selection */
+            --compare-active-bg: #00796b; /* Teal background for active compare button */
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            -webkit-text-size-adjust: 100%;
+            font-family: 'Roboto', sans-serif;
+            background-color: #222;
+            color: var(--text-color);
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+            touch-action: pan-y; /* Allow vertical scrolling, prevent pinch-zoom */
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Changed from height */
+            min-height: -webkit-fill-available; /* iOS */
+            padding: 10px;
+            padding-top: env(safe-area-inset-top); /* Handle iOS notch */
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box;
+            overscroll-behavior: none;
+        }
+
+        /* --- Basketball Dex Container --- */
+        .bball-dex {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1000px;
+            height: calc(100vh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); /* Adjust for padding */
+            max-height: -webkit-fill-available;
+            background: linear-gradient(145deg, var(--dex-accent-color), var(--dex-main-color));
+            border-radius: 15px;
+            box-shadow: 0 0 25px rgba(255, 111, 0, 0.6);
+            border: 5px solid #000;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- Panels --- */
+        .left-panel, .right-panel {
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .left-panel {
+            background-color: var(--panel-bg-left);
+            align-items: center;
+            flex-shrink: 0; /* Prevent shrinking */
+            /* Removed fixed height */
+        }
+
+        .right-panel {
+            background-color: var(--panel-bg-right);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex-grow: 1; /* Allow growing */
+            position: relative;
+            min-height: 150px; /* Ensure some height */
+        }
+
+        /* --- Left Panel: Screen Area --- */
+        .screen-border {
+            background-color: #ddd;
+            border-radius: 10px 10px 5px 5px;
+            padding: 10px;
+            border: 3px solid #aaa;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 10px;
+             flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .screen {
+            background-color: var(--screen-bg);
+            border: 5px inset var(--screen-border);
+            min-height: 180px; /* Adjusted minimum height */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #player-animation {
+            width: 90px; /* Slightly smaller */
+            height: 90px;
+            margin-bottom: 8px;
+            background-color: #ccc; /* Background shown if image fails */
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #333;
+            flex-shrink: 0;
+        }
+        #player-animation img { /* Style the image itself */
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block; /* Prevents potential extra space below image */
+        }
+
+        /* --- Player Animation --- */
+        @keyframes playerBreathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); } /* Slightly larger in the middle */
+        }
+
+        #player-animation img.animated { /* Apply animation only to images with the 'animated' class */
+          animation: playerBreathe 2.5s ease-in-out infinite; /* Apply the keyframes */
+        }
+        /* --- End Player Animation --- */
+
+
+        #player-name {
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+            margin: 5px 0;
+            font-size: 1.1em; /* Adjusted size */
+            text-shadow: 1px 1px 2px #000;
+            word-break: break-word; /* Prevent overflow */
+        }
+
+        #player-info {
+            font-size: 0.75em; /* Adjusted size */
+            color: var(--text-on-screen);
+            word-break: break-word;
+        }
+
+        /* --- Left Panel: Buttons/Decorations --- */
+        .controls-area {
+            display: flex;
+            justify-content: space-around; /* Space out more */
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 10px;
+            flex-wrap: wrap; /* Allow wrapping if needed */
+            gap: 10px; /* Add gap */
+             flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #power-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #222;
+            background-color: #f00;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .circle-button { /* Now black decorative button */
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: var(--button-black);
+            border: 2px solid var(--button-black-border);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3) inset;
+        }
+
+        /* Generic Button Style */
+        .dex-button {
+            padding: 6px 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8em;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            touch-action: manipulation;
+            text-shadow: 1px 1px 1px #555;
+            border: 2px solid;
+            transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+        }
+         .dex-button:disabled {
+            background-color: #95a5a6 !important; /* Important to override */
+            color: #bdc3c7 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6 !important;
+            border-color: #7f8c8d !important;
+        }
+
+        #highlight-button {
+            background-color: #f39c12; /* Orange */
+            border-color: #d35400;
+        }
+
+        #compare-button {
+            background-color: #3498db; /* Blue */
+            border-color: #2980b9;
+        }
+        #compare-button.active {
+            background-color: var(--compare-active-bg); /* Teal when active */
+             border-color: darken(var(--compare-active-bg), 10%);
+        }
+
+
+        /* --- Right Panel: Player List --- */
+        .player-list-container {
+            background-color: #333;
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            max-height: 150px; /* Keep this constrained */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+             flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #player-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); /* Slightly smaller min */
+            gap: 6px;
+        }
+        #player-list li {
+            background-color: #555;
+            padding: 8px 6px; /* More vertical padding */
+            border-radius: 5px;
+            cursor: pointer;
+            touch-action: manipulation;
+            text-align: center;
+            font-size: 0.75em; /* Smaller text for more items */
+            border: 2px solid #222; /* Increased border */
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden; /* Prevent text overflow */
+            text-overflow: ellipsis; /* Add ellipsis */
+            white-space: nowrap; /* Keep on one line */
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            min-height: 25px; /* Minimum height for tap target */
+            display: flex; /* Center text vertically */
+            align-items: center;
+            justify-content: center;
+        }
+        #player-list li.active { /* Normal Selection */
+            background-color: var(--dex-accent-color);
+            color: #fff;
+            font-weight: bold;
+            border-color: var(--dex-main-color);
+        }
+         #player-list li.compare-selected { /* Compare Selection */
+            background-color: #444; /* Darker background */
+            color: #fff;
+            font-weight: bold;
+            border: 2px solid var(--compare-select-border); /* Cyan border */
+            box-shadow: 0 0 5px var(--compare-select-border);
+        }
+
+
+        /* --- Right Panel: Details Area --- */
+        #player-details {
+            background-color: #3a3a3a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            flex-grow: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+             min-height: 100px; /* Ensure minimum height */
+        }
+        #details-content { }
+        #player-details h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--dex-main-color);
+            margin-top: 0;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 4px;
+            font-size: 1em;
+        }
+        #player-details p, #player-details ul {
+            font-size: 0.8em;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            word-wrap: break-word; /* Allow long words to break */
+        }
+        #player-details ul { list-style: none; padding-left: 0; }
+        #player-details li { background-color: #4f4f4f; padding: 4px 6px; margin-bottom: 4px; border-radius: 3px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); /* Smaller min for stats */
+            gap: 6px;
+            margin-bottom: 10px; /* Add margin below */
+        }
+        .stat-item {
+            background-color: #4f4f4f;
+            padding: 4px;
+            border-radius: 3px;
+            text-align: center;
+            border: 1px solid #222;
+            font-size: 0.9em; /* Ensure stats are readable */
+       }
+        .stat-item strong { color: var(--dex-main-color); display: block; font-size: 0.8em; margin-bottom: 2px;} /* Orange stat name, smaller */
+
+        /* --- Compare View Specific Styles --- */
+        .compare-view {
+            display: flex;
+            gap: 15px;
+        }
+        .compare-column {
+            flex: 1;
+            min-width: 0; /* Allow shrinking */
+        }
+        .compare-column h3 {
+             font-size: 0.9em; /* Smaller headings for compare */
+             white-space: nowrap;
+             overflow: hidden;
+             text-overflow: ellipsis;
+        }
+        .compare-column .stats-grid {
+             grid-template-columns: 1fr; /* Stack stats in compare view */
+             gap: 4px;
+        }
+        .compare-column .stat-item {
+             display: flex;
+             justify-content: space-between;
+             padding: 3px 6px;
+             text-align: left;
+        }
+         .compare-column .stat-item strong {
+             display: inline; /* Keep label and value on same line */
+             margin-bottom: 0;
+             margin-right: 5px;
+         }
+        .compare-prompt {
+            text-align: center;
+            padding-top: 20px;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--text-on-screen);
+        }
+
+        /* --- Basketball Man Icon Style --- */
+        .basketball_man {
+          display: inline-block; /* Allows setting width/height while staying inline */
+          width: 24px;         /* Set desired width (adjust as needed) */
+          height: 24px;        /* Set desired height (adjust as needed) */
+          background-image: url('https://github.githubassets.com/images/icons/emoji/unicode/26f9-2642.png?v8');
+          background-size: contain; /* Scales the image to fit within the element */
+          background-repeat: no-repeat; /* Prevents the image from tiling */
+          background-position: center; /* Centers the image within the element */
+          vertical-align: middle; /* Optional: Adjust vertical alignment if used next to text */
+        }
+
+        /* --- On/Off State Styling --- */
+        .bball-dex.dex-off #power-button {
+            background-color: #555;
+            box-shadow: none;
+        }
+        .bball-dex.dex-off .screen {
+            background-color: #1a1a1a;
+            border-color: #000;
+            opacity: 0.8;
+        }
+        .bball-dex.dex-off #player-animation,
+        .bball-dex.dex-off #player-name,
+        .bball-dex.dex-off #player-info {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .bball-dex.dex-off #details-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .bball-dex.dex-off #player-list li {
+            pointer-events: none;
+            color: #888;
+            background-color: #444;
+            border-color: #222; /* Ensure border goes dark too */
+        }
+        .bball-dex.dex-off #highlight-button,
+        .bball-dex.dex-off #compare-button {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* Scrollbar styling (Optional, Webkit browsers) */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--panel-bg-right); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+
+        /* --- Responsive Adjustments for Larger Screens --- */
+        @media (min-width: 768px) {
+            .bball-dex {
+                flex-direction: row;
+                height: 650px; /* Fixed height for desktop is fine */
+                 max-height: 90vh; /* But add a max height relative to viewport */
+            }
+            .left-panel {
+                flex-basis: 40%; /* Adjusted basis */
+                border-right: 3px solid #000;
+                justify-content: center; /* Center content vertically */
+            }
+            .right-panel {
+                flex-basis: 60%; /* Adjusted basis */
+                max-height: 100%; /* Ensure right panel can fill height */
+            }
+            .screen-border { padding: 15px; width: 95%; margin-bottom: 15px;}
+            .screen { min-height: 280px; }
+            #player-animation { width: 120px; height: 120px; }
+            #player-name { font-size: 1.4em; }
+            #player-info { font-size: 0.9em; }
+            .controls-area { margin-top: 20px; gap: 15px; }
+            #power-button { width: 45px; height: 45px; }
+            .circle-button { width: 40px; height: 40px; }
+            .dex-button { padding: 8px 15px; font-size: 0.9em; }
+            .player-list-container { padding: 10px; max-height: 200px; } /* More height for list */
+            #player-list { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+            #player-list li { padding: 10px 8px; font-size: 0.9em; min-height: 30px; }
+            #player-details { padding: 15px; }
+            #player-details h3 { font-size: 1.2em; }
+            #player-details p, #player-details ul { font-size: 0.9em; margin-bottom: 12px; }
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; } /* Adjust stat grid */
+            .stat-item { padding: 5px; font-size: 1em; }
+            .stat-item strong { font-size: 0.85em; }
+
+             /* Compare View on Desktop */
+             .compare-view { gap: 20px; }
+             .compare-column h3 { font-size: 1.1em; }
+             .compare-column .stats-grid { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); } /* Can be side-by-side on desktop */
+              .compare-column .stat-item {
+                 display: block; /* Back to block */
+                 text-align: center;
+             }
+              .compare-column .stat-item strong {
+                 display: block;
+                 margin-bottom: 2px;
+                 margin-right: 0;
+             }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bball-dex dex-off" id="bball-dex-container">
+        <div class="left-panel">
+            <div class="screen-border">
+                <div class="screen">
+                    <div id="player-animation">
+                        BASKETBALL DEX </div>
+                    <h2 id="player-name"></h2>
+                    <p id="player-info"></p>
+                </div>
+            </div>
+            <div class="controls-area">
+                <div id="power-button"></div>
+                <button id="highlight-button" class="dex-button" disabled>Highlight</button>
+                <button id="compare-button" class="dex-button" disabled>Compare</button>
+                </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="player-list-container">
+                <ul id="player-list"></ul>
+            </div>
+            <div id="player-details">
+                <div id="details-content">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global State ---
+        let isDexOn = false;
+        let selectedPlayer = null;
+        let currentFormIndex = 0;
+        let currentActiveListItem = null; // For single view highlight
+        let isCompareModeActive = false; // NEW: Compare mode state
+        let comparePlayer1 = null; // NEW: First player to compare
+        let comparePlayer2 = null; // NEW: Second player to compare
+
+        // --- Player Data ---
+        // Placeholder image data URL (simple grey square)
+        const placeholderImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAEJJREFUeJztwQEBAAAAgiD/r25IQAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfBuCAAAB0niJ8AAAAABJRU5ErkJggg==';
+
+        // Actual player images object
+        const playerImages = {
+            // *** UPDATED Alex's image URL below ***
+            "Alex": "https://imgur.com/mSWXMgu.jpg",
+            "Billy": "https://i.imgur.com/nSIhi4u.jpg​",
+            "E": "https://i.imgur.com/zzFEu19.jpg",
+            "Conrad": "https://i.imgur.com/125pmmz.jpg",
+            "Gary": "https://i.imgur.com/EK5lh65.jpg",
+            "Frantz": "https://i.imgur.com/HlPtkVd.jpg",
+            "Kes": "https://i.imgur.com/NaMPaLs.jpg​",            "Kev": "https://i.imgur.com/JYP2eKt.jpg​",
+            "Marv": "https://i.imgur.com/WtrDwys.jpg",
+            "Murda Leeks": "https://i.imgur.com/snvbc6z.jpg",
+            "Rick": "https://i.imgur.com/DHSZLH2.jpg",
+            "Steven": "https://i.imgur.com/1zu3aVz.jpg",
+            "TY": "https://i.imgur.com/HLo5zUv.jpg​",
+            "Terence": "https://i.imgur.com/7vyrF8W.jpg",
+            "Jeff": "https://i.imgur.com/Htq4WTL.jpg",
+            "basketball_man": "https://github.githubassets.com/images/icons/emoji/unicode/26f9-2642.png?v8"
+        };
+
+        // Player data array using the playerImages object
+        const bballData = [
+             { id: 1, name: "Alex", nickname: "Haze11213", role: "Point Guard",
+               image: playerImages["Alex"], forms: ["Base", "Swirl", "Frog Splash"],
+               skills: ["Give and Go", "Frog Splash Dunk"], notes: "Once he dimes you with a give and go, it’s over—you’ll be left in a swirl, just to jump out with the Frog Splash.",
+               stats: { scoring: 'A', passing: 'S', defense: 'B', speed: 'S', handles: 'A' } },
+             { id: 2, name: "Billy", nickname: "Billionaire Bills", role: "?",
+               image: playerImages["Billy"], forms: ["Base", "Legendary Cash"],
+               skills: ["Cash Moves"], notes: "Yet to be found on court. Legend says he’s out there somewhere, all cash.",
+               stats: { scoring: '?', passing: '?', defense: '?', speed: '?', handles: '?' } },
+             { id: 3, name: "E", nickname: "Big E", role: "Center",
+               image: playerImages["E"], forms: ["Base", "The Diesel"],
+               skills: ["Post Dominance", "Time Reversal Dunk"], notes: "The most dominant big man; some say when he activates, he turns back time into The Diesel. Nigga run.",
+               stats: { scoring: 'A', passing: 'C', defense: 'SS', speed: 'B', handles: 'C' } },
+             { id: 4, name: "Conrad", nickname: "KingCon", role: "Power Forward",
+               image: playerImages["Conrad"], forms: ["Base", "Streaky Shooter"],
+               skills: ["Shot Creation", "Challenged Shots"], notes: "Something like out a western, a streaky shooter who never met an offense he wouldn’t challenge.",
+               stats: { scoring: 'A+', passing: 'B', defense: 'S', speed: 'A', handles: 'A' } },
+             { id: 5, name: "Gary", nickname: "Vybz No Tel.", role: "Shooting Guard",
+               image: playerImages["Gary"], forms: ["Base", "Sniper"],
+               skills: ["Unlimited Range", "No-Miss Vybz"], notes: "The sniper range has no limit; there’s no way to tell where the vybz will connect from. Mr. Never Miss Twice.",
+               stats: { scoring: 'S', passing: 'B', defense: 'C', speed: 'C+', handles: 'B' } },
+             { id: 6, name: "Frantz", nickname: "Frizzy", role: "Power Forward",
+               image: playerImages["Frantz"], forms: ["Base", "Post Extraordinaire"],
+               skills: ["Post Moves", "Middy Mastery"], notes: "Post and middy extraordinaire; every shot he takes makes the game look easy.",
+               stats: { scoring: 'A+', passing: 'C', defense: 'B+', speed: 'B', handles: 'B' } },
+             { id: 7, name: "Kes", nickname: "Mr Handles", role: "Point Guard",
+               image: playerImages["Kes"], forms: ["Base", "Shake and Bake"],
+               skills: ["Ankle Breakers", "Seasoned Dribbles"], notes: "Some say he’s the reason chicken got seasoning, the way he shakes and bakes them and leaves them at the grill for deuce.",
+               stats: { scoring: 'A+', passing: 'A', defense: 'B', speed: 'A+', handles: 'S' } },
+             { id: 8, name: "Kev", nickname: "The First Durant", role: "Small Forward",
+               image: playerImages["Kev"], forms: ["Base", "Grim Reaper"],
+               skills: ["Three-Point Mastery", "Knee Cap Reaper"], notes: "Before Durant stepped in the league, his sensei was showing the archetype, grim reaping knee cap for three.",
+               stats: { scoring: 'A+', passing: 'B', defense: 'A+', speed: 'A', handles: 'S' } },
+             { id: 9, name: "Marv", nickname: "Marvelous Marv", role: "All-Rounder",
+               image: playerImages["Marv"], forms: ["Base", "Complete Player"],
+               skills: ["Three-Point Shot", "Middy Fade", "Ankle Breaker"], notes: "The complete player: shoots the three, fades the middy, breaks your ankles and puts them back.",
+               stats: { scoring: 'S', passing: 'S', defense: 'A-', speed: 'S', handles: 'S' } },
+             { id: 10, name: "Murda Leeks", nickname: "Iron Heart", role: "Small Forward",
+               image: playerImages["Murda Leeks"], forms: ["Base", "Unstoppable Murda"],
+               skills: ["Relentless Drive", "Clutch Plays"], notes: "Iron heart player who never gives up; winning is a must. Turns into the Unstoppable Murda when playing against Steven.",
+               stats: { scoring: 'C+', passing: 'B-', defense: 'B+', speed: 'C+', handles: 'C' } },
+             { id: 11, name: "Rick", nickname: "Wealthy", role: "Shooting Guard",
+               image: playerImages["Rick"], forms: ["Base", "Flash Frenzy"],
+               skills: ["Tornado Drive", "Hurricane Finish"], notes: "A baller that knows how to put his challenger into a frenzy, whether it be a tornado behind or a hurricane to the face, he’ll get to the basket in a Flash.",
+               stats: { scoring: 'A-', passing: 'B', defense: 'B', speed: 'A', handles: 'A' } },
+             { id: 12, name: "Steven", nickname: "Mr. Even", role: "Point Guard",
+               image: playerImages["Steven"], forms: ["Base", "Steven Spielberg"],
+               skills: ["Trajectory Mastery", "Game Changer"], notes: "The only reason a score is never flat or even; this player has the skill of trajectory. Turns into Steven Spielberg when facing Murda Leeks. It’s a movie!",
+               stats: { scoring: 'B-', passing: 'C+', defense: 'C', speed: 'C', handles: 'C+' } },
+             { id: 13, name: "TY", nickname: "Ankle Legend", role: "?",
+               image: playerImages["TY"], forms: ["Base", "Real Deal"],
+               skills: ["Ankle Destruction"], notes: "Yet to be found on court. Legend says if he steps on court, it’s finna get real for your ankles.",
+               stats: { scoring: '?', passing: '?', defense: '?', speed: '?', handles: '?' } },
+             { id: 14, name: "Terence", nickname: "Tripple Rence", role: "Shooting Guard",
+               image: playerImages["Terence"], forms: ["Base", "Ridiculous Range"],
+               skills: ["Three-Point Range", "Arc Mastery"], notes: "This man might as well have three R’s in his name ‘cause from the arc, his range is really ridiculous.",
+               stats: { scoring: 'Rated R', passing: 'B', defense: 'C', speed: 'B-', handles: 'B' } },
+             { id: 15, name: "Jeff", nickname: "The Mysterious Baller", role: "?",
+               image: playerImages["Jeff"], forms: ["Base", "Mystery Points"],
+               skills: ["Shifty Layup", "Unstoppable Drive"], notes: "Shifty and unstoppable for the lay. The story is he once walked by 15 NBA cheerleaders and they all got FILAAYYYY'd.",
+               stats: { scoring: 'A+', passing: '?', defense: '?', speed: '??', handles: '?' } }
+        ];
+
+        // --- DOM References ---
+        const dexContainer = document.getElementById('bball-dex-container');
+        const powerButton = document.getElementById('power-button');
+        const highlightButton = document.getElementById('highlight-button');
+        const compareButton = document.getElementById('compare-button'); // NEW
+        const playerList = document.getElementById('player-list');
+        const playerAnimation = document.getElementById('player-animation');
+        const playerName = document.getElementById('player-name');
+        const playerInfo = document.getElementById('player-info');
+        const detailsContent = document.getElementById('details-content');
+
+        // --- Utility Function for Event Handling ---
+        function addEvent(element, handler) {
+            if (!element) {
+                console.error("Attempted to add event to null element.");
+                return;
+            }
+            const handleEvent = (e) => {
+                // Only prevent default on touchstart for specific interactive elements if needed
+                // Buttons and list items already have touch-action: manipulation via CSS mostly
+                 if (e.type === 'touchstart') {
+                     // Check if the target or its parent prevents default behavior
+                     let target = e.target;
+                     while(target && target !== element) {
+                         if(target.style.touchAction === 'none' || target.classList.contains('needs-prevent-default')) {
+                             e.preventDefault();
+                             break;
+                         }
+                         target = target.parentElement;
+                     }
+                      // If the element itself needs it
+                      if(element.style.touchAction === 'none' || element.classList.contains('needs-prevent-default')) {
+                           e.preventDefault();
+                      }
+                 }
+                 handler(e);
+            };
+
+            element.addEventListener('click', handleEvent);
+            // Using passive: false carefully for elements where we *might* preventDefault (like map dragging, but not needed here yet)
+             // For simple taps, passive: true (the default) is generally better for performance.
+            element.addEventListener('touchstart', handleEvent, { passive: true }); // Changed to passive: true for buttons/list
+        }
+
+        // --- Functions ---
+
+        function setPowerState(isOn) {
+            try {
+                isDexOn = isOn;
+                if (isOn) {
+                    dexContainer.classList.remove('dex-off');
+                    powerButton.style.backgroundColor = '#f00';
+                    powerButton.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.7)';
+                    compareButton.disabled = false; // Enable compare button
+
+                    // Restore last selected player or show prompt
+                    if (selectedPlayer && !isCompareModeActive) {
+                        displayPlayerData(selectedPlayer.id, false); // Display last selected
+                         highlightButton.disabled = !(selectedPlayer.forms && selectedPlayer.forms.length > 1);
+                    } else if (isCompareModeActive) {
+                        // If compare mode was active, re-render its state
+                        updateCompareUI();
+                         highlightButton.disabled = true; // Highlight disabled in compare mode
+                    } else {
+                        clearDisplay();
+                        detailsContent.innerHTML = '<p class="compare-prompt">Select a player.</p>';
+                         highlightButton.disabled = true;
+                    }
+                     // Ensure compare button reflects mode
+                     compareButton.classList.toggle('active', isCompareModeActive);
+
+                } else {
+                    dexContainer.classList.add('dex-off');
+                    powerButton.style.backgroundColor = '#555';
+                    powerButton.style.boxShadow = 'none';
+                    clearDisplay();
+                    detailsContent.innerHTML = '';
+                    highlightButton.disabled = true;
+                    compareButton.disabled = true;
+                    compareButton.classList.remove('active'); // Deactivate compare button visually
+
+                     // Clear selection highlights
+                    if (currentActiveListItem) {
+                        currentActiveListItem.classList.remove('active');
+                        currentActiveListItem = null;
+                    }
+                     clearCompareSelectionVisuals(); // Clear compare highlights too
+
+                    // Reset state (optional, could persist selection when off)
+                    // selectedPlayer = null;
+                    // isCompareModeActive = false; // Turn off compare mode when powered off
+                    // comparePlayer1 = null;
+                    // comparePlayer2 = null;
+                }
+            } catch (error) {
+                console.error('Error in setPowerState:', error);
+            }
+        }
+
+        function clearDisplay() {
+            try {
+                // Reset the animation container to its initial text state
+                playerAnimation.innerHTML = `<span style="color: #333; font-weight: bold;">${isDexOn ? 'SELECT PLAYER' : 'BASKETBALL DEX'}</span>`;
+                playerName.textContent = '';
+                playerInfo.textContent = '';
+            } catch (error) {
+                console.error('Error in clearDisplay:', error);
+            }
+        }
+
+        function populatePlayerList() {
+            try {
+                playerList.innerHTML = '';
+                bballData.forEach(player => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = player.name;
+                    listItem.dataset.id = player.id;
+                    addEvent(listItem, handlePlayerSelect);
+                    playerList.appendChild(listItem);
+                });
+            } catch (error) {
+                console.error('Error in populatePlayerList:', error);
+            }
+        }
+
+        // NEW: Central handler for selecting players
+         function handlePlayerSelect(event) {
+             try {
+                 if (!isDexOn) return;
+                 const listItem = event.currentTarget;
+                 const playerId = parseInt(listItem.dataset.id);
+                 const player = bballData.find(p => p.id === playerId);
+
+                 if (!player) return;
+
+                 if (isCompareModeActive) {
+                     handleCompareSelect(player, listItem);
+                 } else {
+                      handleSingleSelect(player, listItem);
+                  }
+             } catch (error) {
+                 console.error('Error in handlePlayerSelect:', error);
+             }
+         }
+
+        // OLD logic now in its own function
+        function handleSingleSelect(player, listItem) {
+             // Remove compare highlights if any
+             clearCompareSelectionVisuals();
+
+             // Update selection state
+             selectedPlayer = player;
+             currentFormIndex = 0; // Reset form index
+
+             // Update UI
+             displayPlayerData(player.id, false); // This now adds the animation class
+
+             // Update list item highlight
+             if (currentActiveListItem) {
+                 currentActiveListItem.classList.remove('active');
+             }
+             listItem.classList.add('active');
+             currentActiveListItem = listItem;
+
+             // Enable/disable highlight button
+             highlightButton.disabled = !(player.forms && player.forms.length > 1);
+        }
+
+        // NEW: Handle selection in compare mode
+        function handleCompareSelect(player, listItem) {
+            // Remove single select highlight if any
+            if (currentActiveListItem) {
+                 currentActiveListItem.classList.remove('active');
+                 currentActiveListItem = null;
+            }
+
+            // Determine if we are selecting player 1 or 2
+            if (!comparePlayer1 || (comparePlayer1 && comparePlayer2 && comparePlayer1.id === player.id)) {
+                // Select as player 1 (or re-select player 1)
+                if (comparePlayer2 && comparePlayer2.id === player.id) {
+                    // Cannot select the same player twice
+                    return;
+                }
+                comparePlayer1 = player;
+                comparePlayer2 = null; // Clear player 2 when selecting player 1
+                clearCompareSelectionVisuals(); // Clear all previous compare highlights
+                listItem.classList.add('compare-selected');
+
+            } else if (!comparePlayer2 || (comparePlayer1 && comparePlayer2 && comparePlayer2.id === player.id)) {
+                 // Select as player 2 (or re-select player 2)
+                 if (comparePlayer1 && comparePlayer1.id === player.id) {
+                     // Cannot select the same player twice
+                     return;
+                 }
+                 comparePlayer2 = player;
+                 // Clear only player 2's previous highlight if it existed
+                 const existingP2 = playerList.querySelector('.compare-selected:not([data-id="' + comparePlayer1.id + '"])');
+                 if(existingP2) existingP2.classList.remove('compare-selected');
+                 listItem.classList.add('compare-selected');
+
+            } else {
+                // Both slots filled, replace player 1
+                comparePlayer1 = player;
+                comparePlayer2 = null; // Clear player 2
+                clearCompareSelectionVisuals(); // Clear all highlights
+                listItem.classList.add('compare-selected');
+            }
+
+            // Update the details view
+            updateCompareUI();
+            highlightButton.disabled = true; // Highlight always disabled in compare mode
+        }
+
+        // NEW: Clear compare selection visuals from list items
+        function clearCompareSelectionVisuals() {
+            playerList.querySelectorAll('.compare-selected').forEach(li => {
+                li.classList.remove('compare-selected');
+            });
+        }
+
+        // NEW: Toggle compare mode
+        function toggleCompareMode() {
+            if (!isDexOn) return;
+
+            isCompareModeActive = !isCompareModeActive;
+            compareButton.classList.toggle('active', isCompareModeActive);
+
+            if (isCompareModeActive) {
+                // Entering compare mode
+                comparePlayer1 = null; // Reset selections
+                comparePlayer2 = null;
+                clearCompareSelectionVisuals();
+                if (currentActiveListItem) {
+                    currentActiveListItem.classList.remove('active'); // Remove single select highlight
+                    currentActiveListItem = null;
+                }
+                updateCompareUI(); // Show compare prompt
+                 highlightButton.disabled = true; // Disable highlight button
+                 selectedPlayer = null; // Clear single selection state
+
+            } else {
+                // Exiting compare mode
+                comparePlayer1 = null;
+                comparePlayer2 = null;
+                clearCompareSelectionVisuals();
+                // Restore last single selection or clear display
+                if (selectedPlayer) {
+                     // Need the list item to pass to handleSingleSelect
+                     const playerListItem = playerList.querySelector(`[data-id="${selectedPlayer.id}"]`);
+                     if (playerListItem) {
+                        handleSingleSelect(selectedPlayer, playerListItem);
+                     } else { // Fallback if list item not found (shouldn't happen)
+                        clearDisplay();
+                        detailsContent.innerHTML = '<p class="compare-prompt">Select a player.</p>';
+                        highlightButton.disabled = true;
+                     }
+                } else {
+                    clearDisplay();
+                    detailsContent.innerHTML = '<p class="compare-prompt">Select a player.</p>';
+                    highlightButton.disabled = true;
+                }
+            }
+        }
+
+
+        function displayPlayerData(playerId, cycleForm = false) {
+            try {
+                if (!isDexOn) return;
+
+                const player = bballData.find(p => p.id === playerId);
+                if (!player) return;
+
+                // Update state if not just cycling form
+                if (!cycleForm) {
+                    selectedPlayer = player;
+                    currentFormIndex = 0; // Reset form index when selecting a new player
+                }
+
+                // Cycle through forms if requested and available
+                if (cycleForm && player.forms && player.forms.length > 1) {
+                    currentFormIndex = (currentFormIndex + 1) % player.forms.length;
+                }
+
+                // Update Screen - ADD 'animated' CLASS TO IMG
+                playerAnimation.innerHTML = `<img src="${player.image}" alt="${player.name}" class="animated" onerror="this.onerror=null;this.src='${placeholderImg}';">`;
+                playerName.textContent = player.name;
+                let infoText = `#${player.id} - ${player.nickname} (${player.role})`;
+                if (player.forms && player.forms.length > 0) {
+                    infoText += ` - Form: ${player.forms[currentFormIndex]}`;
+                }
+                playerInfo.textContent = infoText;
+
+
+                // Update Details Panel (Single View only, compare handled separately)
+                if (!isCompareModeActive) {
+                    detailsContent.innerHTML = generatePlayerDetailsHTML(player);
+                }
+
+                // Enable/disable highlight button based on forms (only in single view)
+                highlightButton.disabled = isCompareModeActive || !(player.forms && player.forms.length > 1);
+
+            } catch (error) {
+                console.error('Error in displayPlayerData:', error);
+            }
+        }
+
+        // NEW: Function to generate HTML for a single player's details
+        function generatePlayerDetailsHTML(player) {
+             if (!player) return '<p class="compare-prompt">Player data not found.</p>';
+
+             let statsHTML = '<div class="stats-grid">';
+             if (player.stats) {
+                 for (const [stat, value] of Object.entries(player.stats)) {
+                     statsHTML += `<div class="stat-item"><strong>${stat.toUpperCase()}</strong> ${value}</div>`;
+                 }
+             } else {
+                 statsHTML += '<p>No stats available.</p>';
+             }
+             statsHTML += '</div>';
+
+             let skillsHTML = '';
+             if (player.skills && player.skills.length > 0) {
+                 skillsHTML = `<h3>Skills</h3><ul>${player.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>`;
+             }
+
+             let notesHTML = '';
+             if (player.notes) {
+                 notesHTML = `<h3>Notes</h3><p>${player.notes}</p>`;
+             }
+
+             return `
+                 <h3>Stats</h3>
+                 ${statsHTML}
+                 ${skillsHTML}
+                 ${notesHTML}
+             `;
+        }
+
+        // NEW: Update UI for Compare Mode
+        function updateCompareUI() {
+             if (!isDexOn) return;
+             if (!isCompareModeActive) return; // Only run if compare mode is active
+
+             let content = '';
+             if (!comparePlayer1 && !comparePlayer2) {
+                 content = '<p class="compare-prompt">Select the first player to compare.</p>';
+             } else if (comparePlayer1 && !comparePlayer2) {
+                 content = '<p class="compare-prompt">Select the second player to compare.</p>';
+             } else if (comparePlayer1 && comparePlayer2) {
+                 // Both players selected, show comparison
+                 content = `
+                     <div class="compare-view">
+                         <div class="compare-column">
+                             ${generatePlayerDetailsHTML(comparePlayer1)}
+                         </div>
+                         <div class="compare-column">
+                             ${generatePlayerDetailsHTML(comparePlayer2)}
+                         </div>
+                     </div>
+                 `;
+             } else {
+                 // Should not happen, but fallback
+                 content = '<p class="compare-prompt">Select players to compare.</p>';
+             }
+
+             detailsContent.innerHTML = content;
+             // Clear screen display when comparing - Use specific text
+             // clearDisplay(); // Don't fully clear, just update animation div
+             playerAnimation.innerHTML = `<span style="color: #333; font-weight: bold;">COMPARING</span>`;
+             playerName.textContent = ''; // Clear name/info
+             playerInfo.textContent = '';
+
+        }
+
+
+        function cyclePlayerForm() {
+            try {
+                if (!isDexOn || isCompareModeActive || !selectedPlayer) return; // Don't cycle if off, comparing, or no player selected
+                displayPlayerData(selectedPlayer.id, true); // Call display with cycleForm = true
+            } catch (error) {
+                console.error('Error in cyclePlayerForm:', error);
+            }
+        }
+
+        // --- Initialization ---
+        function init() {
+            try {
+                populatePlayerList();
+                setPowerState(false); // Start with Dex off
+
+                // Event Listeners
+                addEvent(powerButton, () => setPowerState(!isDexOn));
+                addEvent(highlightButton, cyclePlayerForm);
+                addEvent(compareButton, toggleCompareMode); // NEW: Add listener for compare button
+
+                // Initial setup complete
+                console.log("Basketball Dex Initialized");
+
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                // Optionally display an error to the user
+                document.body.innerHTML = "<h1>Error loading Basketball Dex. Please refresh.</h1>";
+            }
+        }
+
+        // --- Prevent Double Tap Zoom ---
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+          const now = (new Date()).getTime();
+          if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, false);
+
+        // --- Prevent Pinch Zoom ---
+         document.addEventListener('gesturestart', function (e) {
+             e.preventDefault();
+         });
+
+        // --- Start the app ---
+        // Use DOMContentLoaded to ensure the DOM is ready before running scripts
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
